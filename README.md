@@ -1,6 +1,6 @@
-# Belajar Node.js Dasar (konversi dari Spring)
+# Belajar Node.js Dasar
 
-Project ini adalah konversi sederhana dari contoh Spring Boot dasar ke Node.js + Express.
+Project Dasar Node.js + Express.
 
 ## Install
 ```bash
