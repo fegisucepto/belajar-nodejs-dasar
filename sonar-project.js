@@ -12,12 +12,12 @@ scanner(
       'sonar.sourceEncoding': 'UTF-8',
       'sonar.exclusions': 'node_modules/**,**/*.test.js,**/*.spec.js,coverage/**,dist/**,**/__tests__/**,**/test/**',
       'sonar.javascript.lcov.reportPaths': 'coverage/lcov.info',
-      'sonar.testExecutionReportPaths': 'test-report.xml',
       'sonar.scm.disabled': 'true',
       'sonar.scm.provider': 'git',
-      'sonar.scm.exclusions.disabled': 'true',
       'sonar.qualitygate.wait': 'true',
-      'sonar.host.url': 'https://sonarcloud.io'  // Tambahkan ini
+      'sonar.analysis.ci': 'Github Actions',
+      'sonar.analysis.buildNumber': process.env.GITHUB_RUN_ID,
+      'sonar.analysis.pipeline': process.env.GITHUB_RUN_NUMBER
     },
   },
   (result) => {
