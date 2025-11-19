@@ -6,55 +6,72 @@ on:
   pull_request:
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
+    
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-
-    - name: Notify Slack - Start
-      if: always()
-      uses: rtCamp/action-slack-notify@v2
-      env:
+      # 1. Checkout Code
+      - uses: actions/checkout@v4
+      
+      # 2. Setup Node.js
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      # 3. Notifikasi Start
+      - name: Notify Slack - Start
+        uses: rtCamp/action-slack-notify@v2
+        env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           STATUS: STARTED
-          MESSAGE: "Build dimulai: ${{ github.workflow }} #${{ github.run_number }}"
-
-    - run: npm run build --if-present
-    - run: npm test
-
-    - name: Notify Slack - Success
-      if: success()
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        STATUS: SUCCESS
-        MESSAGE: |
-          ✅ Build ${{ github.workflow }} #${{ github.run_number }} berhasil!
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-    - name: Notify Slack - Failure
-      if: failure()
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        STATUS: FAILURE
-        MESSAGE: |
-          ❌ Build ${{ github.workflow }} #${{ github.run_number }} gagal!
-          Branch: ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
-          Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MESSAGE: "🚀 Build ${{ github.workflow }} #${{ github.run_number }} dimulai..."
+      
+      # 4. Install Dependencies
+      - name: Install Dependencies
+        run: npm ci
+      
+      # 5. Linting (jika ada)
+      - name: Run Linter
+        run: npm run lint --if-present
+      
+      # 6. Build
+      - name: Build
+        run: npm run build --if-present
+      
+      # 7. Run Tests
+      - name: Run Tests
+        run: npm test
+        env:
+          NODE_ENV: test
+      
+      # 8. Notifikasi Hasil
+      - name: Notify Slack - Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: SUCCESS
+          MESSAGE: |
+            ✅ Build ${{ github.workflow }} #${{ github.run_number }} berhasil!
+            Node.js: ${{ matrix.node-version }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      
+      - name: Notify Slack - Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: FAILURE
+          MESSAGE: |
+            ❌ Build ${{ github.workflow }} #${{ github.run_number }} gagal!
+            Node.js: ${{ matrix.node-version }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
