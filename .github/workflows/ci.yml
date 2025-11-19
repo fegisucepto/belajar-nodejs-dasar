@@ -23,5 +23,38 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
+
+    - name: Notify Slack - Start
+      if: always()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: STARTED
+          MESSAGE: "Build dimulai: ${{ github.workflow }} #${{ github.run_number }}"
+
     - run: npm run build --if-present
     - run: npm test
+
+    - name: Notify Slack - Success
+      if: success()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        STATUS: SUCCESS
+        MESSAGE: |
+          ✅ Build ${{ github.workflow }} #${{ github.run_number }} berhasil!
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    - name: Notify Slack - Failure
+      if: failure()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        STATUS: FAILURE
+        MESSAGE: |
+          ❌ Build ${{ github.workflow }} #${{ github.run_number }} gagal!
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
