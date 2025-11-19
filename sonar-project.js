@@ -2,8 +2,8 @@ const scanner = require('sonarqube-scanner').default;
 
 scanner(
   {
-    serverUrl: 'https://sonarcloud.io',
-    token: process.env.SONAR_TOKEN,
+    serverUrl: '[https://sonarcloud.io](https://sonarcloud.io)',
+    token: process.env.SONAR_TOKEN ||'',
     options: {
       'sonar.organization': 'fegisucepto',
       'sonar.projectKey': 'fegisucepto_belajar-nodejs-dasar',
