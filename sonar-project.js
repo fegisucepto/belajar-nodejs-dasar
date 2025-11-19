@@ -2,8 +2,8 @@ const scanner = require('sonarqube-scanner').default;
 
 scanner(
   {
-    serverUrl: '[https://sonarcloud.io](https://sonarcloud.io)',
-    token: process.env.SONAR_TOKEN ||'',
+    serverUrl: 'https://sonarcloud.io',  // Perbaiki URL-nya
+    token: process.env.SONAR_TOKEN || '',
     options: {
       'sonar.organization': 'fegisucepto',
       'sonar.projectKey': 'fegisucepto_belajar-nodejs-dasar',
@@ -13,11 +13,7 @@ scanner(
       'sonar.exclusions': 'node_modules/**,**/*.test.js,**/*.spec.js,coverage/**,dist/**,**/__tests__/**,**/test/**',
       'sonar.javascript.lcov.reportPaths': 'coverage/lcov.info',
       'sonar.scm.disabled': 'true',
-      'sonar.scm.provider': 'git',
-      'sonar.qualitygate.wait': 'true',
-      'sonar.analysis.ci': 'Github Actions',
-      'sonar.analysis.buildNumber': process.env.GITHUB_RUN_ID,
-      'sonar.analysis.pipeline': process.env.GITHUB_RUN_NUMBER
+      'sonar.qualitygate.wait': 'true'
     },
   },
   (result) => {
