@@ -92,7 +92,9 @@ jobs:
             --cpus=2 \
             --memory=4g \
             --disk-size=20g \
-            --addons=ingress,metrics-server
+            --addons=ingress,metrics-server \
+            --alsologtostderr \
+            --v=2
           
           # Tunggu Minikube siap
           minikube status
@@ -103,9 +105,13 @@ jobs:
           # Buat direktori .kube
           mkdir -p ~/.kube
           
-          # Dapatkan kubeconfig
+          # Dapatkan kubeconfig dari Minikube
           minikube update-context
           minikube kubectl -- config view --flatten > ~/.kube/config
+          
+          # Perbaiki konteks yang salah
+          kubectl config set-context --current --namespace=default
+          kubectl config use-context minikube
           
           # Set permissions
           chmod 600 ~/.kube/config
@@ -113,14 +119,29 @@ jobs:
           # Ekspor KUBECONFIG
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_PATH
+          echo "KUBECONFIG=~/.kube/config" >> /etc/environment
+          
+          # Verifikasi konfigurasi
+          echo "=== KUBECONFIG PATH ==="
+          echo $KUBECONFIG
+          echo "=== KUBECONFIG CONTENT ==="
+          cat ~/.kube/config || true
 
       - name: Verify Kubernetes connection
         run: |
           # Verifikasi koneksi
-          kubectl config view
+          echo "=== MINIKUBE STATUS ==="
+          minikube status
+          echo "=== K8S VERSION ==="
+          kubectl version --short
+          echo "=== NODES ==="
+          kubectl get nodes -v=6
+          echo "=== CLUSTER INFO ==="
           kubectl cluster-info
-          kubectl get nodes --v=6
-          kubectl get pods -A
+          echo "=== CONTEXTS ==="
+          kubectl config get-contexts
+          echo "=== CURRENT CONTEXT ==="
+          kubectl config current-context
 
       - name: Deploy to Kubernetes
         id: deploy
@@ -154,21 +175,27 @@ jobs:
         run: |
           echo "=== Deployment gagal, menampilkan informasi debug ==="
           echo "=== KUBECONFIG ==="
-          ls -la ~/.kube/config || true
-          echo "=== Minikube status ==="
+          ls -la ~/.kube/ || true
+          echo "=== KUBECONFIG CONTENT ==="
+          cat ~/.kube/config || true
+          echo "=== ENV VARIABLES ==="
+          env | grep -i kube
+          echo "=== MINIKUBE STATUS ==="
           minikube status || true
-          echo "=== Kubectl config ==="
+          echo "=== KUBECTL VERSION ==="
+          kubectl version || true
+          echo "=== KUBECTL CONFIG ==="
           kubectl config view || true
-          echo "=== Cluster info ==="
-          kubectl cluster-info || true
-          echo "=== Nodes ==="
-          kubectl get nodes || true
-          echo "=== Pods ==="
+          echo "=== MINIKUBE DOCKER-ENV ==="
+          minikube docker-env || true
+          echo "=== DOCKER INFO ==="
+          docker info || true
+          echo "=== KUBERNETES PODS ==="
           kubectl get pods -A || true
-          echo "=== Events ==="
+          echo "=== KUBERNETES EVENTS ==="
           kubectl get events -A --sort-by='.lastTimestamp' | tail -n 20 || true
-          echo "=== File deployment yang diproses ==="
-          cat /tmp/deployment-processed.yaml || true
+          echo "=== MINIKUBE LOGS ==="
+          minikube logs || true
 
   notify:
     needs: [build-and-push, deploy]
