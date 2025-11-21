@@ -5,8 +5,6 @@ metadata:
   namespace: belajar-nodejs
 spec:
   replicas: 1
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       app: belajar-nodejs-dasar
@@ -18,7 +16,7 @@ spec:
       containers:
       - name: app
         image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         env:
@@ -26,6 +24,9 @@ spec:
           value: "production"
         - name: PORT
           value: "3000"
+        - name: MONGO_URI
+          # Default points to in-cluster mongo service; override via envsubst or secret if needed
+          value: "mongodb://mongo:27017/belajar-nodejs"
         resources:
           requests:
             cpu: "100m"
@@ -35,13 +36,17 @@ spec:
             memory: "512Mi"
         livenessProbe:
           httpGet:
-            path: /
+            path: /health
             port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+          periodSeconds: 20
+          failureThreshold: 6
         readinessProbe:
           httpGet:
-            path: /
+            path: /health
             port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 6

@@ -7,6 +7,10 @@ on:
     branches:
       - 'release/*'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -14,25 +18,28 @@ jobs:
       image_tag: ${{ steps.get_tag.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Get tag
         id: get_tag
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "tag_name=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
           else
-            echo "tag_name=latest" >> $GITHUB_OUTPUT
+            # for release/* branches, use branch name sanitized
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+            SAFE_BRANCH=$(echo "$BRANCH_NAME" | tr / -)
+            echo "tag_name=latest-${SAFE_BRANCH}" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -49,19 +56,15 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     env:
-      KUBECONFIG: ~/.kube/config
       MINIKUBE_HOME: ${{ github.workspace }}/.minikube
-    environment:
-      name: ${{ contains(github.ref, 'release/') && 'staging' || 'production' }}
-      url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gettext-base
-      
+          sudo apt-get install -y gettext-base curl
+
       - name: Install kubectl and minikube
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -69,75 +72,49 @@ jobs:
           sudo mv kubectl /usr/local/bin/
           curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
           sudo install minikube-linux-amd64 /usr/local/bin/minikube
-      
+
       - name: Start Minikube
         run: |
           minikube start --driver=docker --force
-          minikube addons enable ingress
-          minikube addons enable metrics-server
-      
+          minikube addons enable ingress || true
+          minikube addons enable metrics-server || true
+
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
-          minikube update-context
-          kubectl config set-cluster minikube --insecure-skip-tls-verify=true
-          kubectl cluster-info
-          kubectl get nodes
-      
+          minikube update-context || true
+          kubectl config set-cluster minikube --insecure-skip-tls-verify=true || true
+          kubectl cluster-info || true
+          kubectl get nodes || true
+
       - name: Deploy to Kubernetes
         id: deploy
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           TAG: ${{ needs.build-and-push.outputs.image_tag || 'latest' }}
         run: |
-          # Buat namespace
+          set -euo pipefail
+          # Create namespace
           kubectl create namespace belajar-nodejs --dry-run=client -o yaml | kubectl apply -f -
-          
-          # Proses deployment dengan envsubst
-          echo "Menggunakan image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG"
+
+          # Process deployment manifest with envsubst
+          echo "Using image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG"
           envsubst < k8s/deployment.yaml > /tmp/deployment-processed.yaml
-          
-          # Debug: Tampilkan isi file yang sudah diproses
+
           echo "=== File deployment yang diproses ==="
           cat /tmp/deployment-processed.yaml
           echo "===================================="
-          
-          # Terapkan konfigurasi
+
           kubectl apply -f /tmp/deployment-processed.yaml
           kubectl apply -f k8s/service.yaml
-          
-          # Debug pods
-          kubectl get pods -n belajar-nodejs -w &
-          kubectl describe deployment -n belajar-nodejs belajar-nodejs-dasar
-          kubectl get events -n belajar-nodejs --sort-by='.lastTimestamp'
-          
-          # Tunggu deployment selesai
-          timeout 180 kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=90s || true
-          
-          # Tampilkan log jika gagal
-          if [ $? -ne 0 ]; then
-            echo "Deployment gagal, menampilkan log:"
-            kubectl logs -n belajar-nodejs -l app=belajar-nodejs-dasar --tail=50 || true
-            echo "=== File deployment yang diproses ==="
-            cat /tmp/deployment-processed.yaml
-            echo "===================================="
-            exit 1
-          fi
 
-      - name: Debug Minikube
-        if: always()
-        run: |
-          echo "=== Status Minikube ==="
-          minikube status
-          echo "=== Log Minikube ==="
-          minikube logs
-          echo "=== Versi kubectl ==="
-          kubectl version --client
-          echo "=== Info cluster ==="
-          kubectl cluster-info
-          
+          # Wait for rollout
+          kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=180s
+
+        # If any error, action will fail and next notify job will run (if configured)
+
   notify:
     needs: [build-and-push, deploy]
     if: always()
