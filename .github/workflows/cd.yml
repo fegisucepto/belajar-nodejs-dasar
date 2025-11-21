@@ -92,23 +92,26 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           TAG: ${{ needs.build-and-push.outputs.image_tag || 'latest' }}
         run: |
-          # Create namespace
+          # Create namespace if it doesn't exist
           kubectl create namespace belajar-nodejs --dry-run=client -o yaml | kubectl apply -f -
           
-          # Process and apply deployment with envsubst
-          echo "Using image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG"
-          envsubst < k8s/deployment.yaml | tee /tmp/deployment-processed.yaml | kubectl apply -f -
+          # Process deployment with envsubst
+          echo "Deploying image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG"
+          envsubst < k8s/deployment.yaml > /tmp/deployment-processed.yaml
+          kubectl apply -f /tmp/deployment-processed.yaml
+          
+          # Apply service
           kubectl apply -f k8s/service.yaml
           
           # Debug pods
           kubectl get pods -n belajar-nodejs -w &
-          kubectl describe deployment belajar-nodejs-dasar -n belajar-nodejs
+          kubectl describe deployment -n belajar-nodejs belajar-nodejs-dasar
           kubectl get events -n belajar-nodejs --sort-by='.lastTimestamp'
           
-          # Wait for deployment with timeout
-          timeout 180 kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=90s --insecure-skip-tls-verify=true || true
+          # Wait for deployment
+          timeout 180 kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=90s || true
           
-          # Get pod logs if deployment fails
+          # Get logs if deployment fails
           if [ $? -ne 0 ]; then
             echo "Deployment failed, showing pod logs:"
             kubectl logs -n belajar-nodejs -l app=belajar-nodejs-dasar --tail=50 || true
@@ -116,8 +119,6 @@ jobs:
             cat /tmp/deployment-processed.yaml
             exit 1
           fi
-          
-          echo "url=http://$(minikube ip):$(kubectl get svc belajar-nodejs-dasar -n belajar-nodejs -o jsonpath='{.spec.ports[0].nodePort}' --insecure-skip-tls-verify=true)" >> $GITHUB_OUTPUT
 
       - name: Debug Minikube
         run: |
