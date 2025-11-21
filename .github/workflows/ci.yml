@@ -87,6 +87,6 @@ jobs:
           MESSAGE: |
             ${{ job.status == 'success' && '✅' || '❌' }} Build ${{ github.workflow }} #${{ github.run_number }}
             Node.js: ${{ matrix.node-version }} | OS: ${{ matrix.os }}
-            Branch: ${{ github.ref_name }} | Commit: ${{ format('{0:.7}', github.sha) }}
+            Branch: ${{ github.ref_name }} | Commit: ${{ github.sha }}
             Status: ${{ job.status }}
             Lihat detail: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
