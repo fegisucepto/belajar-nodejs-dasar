@@ -6,6 +6,7 @@ on:
       - 'v*'
     branches:
       - 'release/*'
+      - 'main'
 
 permissions:
   contents: read
@@ -56,6 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MINIKUBE_HOME: ${{ github.workspace }}/.minikube
+      KUBECONFIG: ${{ github.workspace }}/.kube/config
     steps:
       - uses: actions/checkout@v4
 
@@ -96,19 +98,28 @@ jobs:
           minikube status
           minikube kubectl -- get nodes
 
-      - name: Fix kubeconfig
+      - name: Configure kubeconfig
         run: |
-          # Backup kubeconfig asli
+          # Buat direktori .kube
           mkdir -p ~/.kube
+          
+          # Dapatkan kubeconfig
           minikube update-context
           minikube kubectl -- config view --flatten > ~/.kube/config
+          
+          # Set permissions
           chmod 600 ~/.kube/config
+          
+          # Ekspor KUBECONFIG
+          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_PATH
 
-      - name: Verify cluster status
+      - name: Verify Kubernetes connection
         run: |
+          # Verifikasi koneksi
           kubectl config view
           kubectl cluster-info
-          kubectl get nodes
+          kubectl get nodes --v=6
           kubectl get pods -A
 
       - name: Deploy to Kubernetes
@@ -126,7 +137,7 @@ jobs:
           echo "Menggunakan image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG"
           envsubst < k8s/deployment.yaml > /tmp/deployment-processed.yaml
           
-          # Terapkan dengan validasi dinonaktifkan
+          # Terapkan konfigurasi
           kubectl apply -f /tmp/deployment-processed.yaml --validate=false
           kubectl apply -f k8s/service.yaml --validate=false
           
@@ -142,10 +153,20 @@ jobs:
         if: failure()
         run: |
           echo "=== Deployment gagal, menampilkan informasi debug ==="
-          kubectl get events -A --sort-by='.lastTimestamp' | tail -n 20
-          kubectl get pods -n belajar-nodejs
-          kubectl describe pods -n belajar-nodejs
-          kubectl logs -n belajar-nodejs -l app=belajar-nodejs-dasar --tail=50 || true
+          echo "=== KUBECONFIG ==="
+          ls -la ~/.kube/config || true
+          echo "=== Minikube status ==="
+          minikube status || true
+          echo "=== Kubectl config ==="
+          kubectl config view || true
+          echo "=== Cluster info ==="
+          kubectl cluster-info || true
+          echo "=== Nodes ==="
+          kubectl get nodes || true
+          echo "=== Pods ==="
+          kubectl get pods -A || true
+          echo "=== Events ==="
+          kubectl get events -A --sort-by='.lastTimestamp' | tail -n 20 || true
           echo "=== File deployment yang diproses ==="
           cat /tmp/deployment-processed.yaml || true
 
