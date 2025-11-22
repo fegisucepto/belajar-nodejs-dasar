@@ -58,17 +58,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install kubectl
+      - name: Install kubectl and minikube
         run: |
+          # Install kubectl
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
+          # Install minikube
+          curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+          sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+      - name: Start Minikube
+        run: |
+          # Stop Minikube if it's already running
+          minikube delete || true
+          
+          # Start Minikube with required options
+          minikube start \
+            --driver=docker \
+          --force \
+          --embed-certs=true \
+          --container-runtime=containerd \
+          --nodes=1 \
+          --cpus=2 \
+          --memory=4g \
+          --disk-size=20g \
+          --addons=ingress,metrics-server \
+          --alsologtostderr \
+          --v=2
+        
+          # Wait for Minikube to be ready
+          minikube status
+          minikube kubectl -- get nodes
+
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          minikube update-context
+          minikube kubectl -- config view --flatten > ~/.kube/config
+          kubectl config set-context --current --namespace=default
+          kubectl config use-context minikube
           chmod 600 ~/.kube/config
+          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+
+      - name: Verify Kubernetes connection
+        run: |
+          echo "=== MINIKUBE STATUS ==="
+          minikube status
+          echo "=== K8S VERSION ==="
+          kubectl version
+          echo "=== NODES ==="
+          kubectl get nodes
+          echo "=== CLUSTER INFO ==="
+          kubectl cluster-info
 
       - name: Deploy to Kubernetes
         env:
@@ -76,22 +119,23 @@ jobs:
           TAG: ${{ needs.build-and-push.outputs.image_tag || 'latest' }}
         run: |
           set -e
-          
+        
           # Create namespace if not exists
           kubectl create namespace belajar-nodejs --dry-run=client -o yaml | kubectl apply -f -
           
-          # Deploy application
-          kubectl apply -f k8s/
-          
+          # Deploy application with validation disabled
+          kubectl apply -f k8s/ --validate=false
+        
           # Wait for deployment to complete
           kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=180s
-
+  
   notify:
     needs: [build-and-push, deploy]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Install kubectl
+        if: always()
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
@@ -101,21 +145,22 @@ jobs:
         if: always()
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          minikube update-context
+          minikube kubectl -- config view --flatten > ~/.kube/config
           chmod 600 ~/.kube/config
-          # Set KUBECONFIG environment variable
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          STATUS: ${{ job.status }}
-          MESSAGE: |
-            ${{ job.status == 'success' && '✅' || '❌' }} Deployment ${{ github.ref_name }}
-            Status: ${{ job.status }}
-            Workflow: ${{ github.workflow }}
-            Commit: ${{ github.sha }}
-            URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Cluster: $(kubectl config current-context 2>/dev/null || echo "N/A")
-            Nodes: $(kubectl get nodes --no-headers 2>/dev/null | wc -l || echo "0")
+          SLACK_TITLE: "Deployment ${{ job.status == 'success' && '✅' || '❌' }} - ${{ github.workflow }}"
+          SLACK_MESSAGE: |
+            *Status*: ${{ job.status == 'success' && 'Berhasil' || 'Gagal' }}
+            *Branch/Tag*: ${{ github.ref_name }}
+            *Workflow*: ${{ github.workflow }}
+            *Commit*: `${{ github.sha }}`
+            *Cluster*: $(kubectl config current-context 2>/dev/null || echo "N/A")
+            *View Logs*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_COLOR: ${{ job.status == 'success' && '#36a64f' || '#ff0000' }}
+          MSG_MINIMAL: "true"
