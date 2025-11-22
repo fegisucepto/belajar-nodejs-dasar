@@ -100,11 +100,23 @@ jobs:
           
           # Wait for MongoDB to be ready
           echo "Waiting for MongoDB to be ready..."
-          minikube kubectl -- rollout status deployment/mongo -n belajar-nodejs --timeout=120s
+          minikube kubectl -- rollout status deployment/mongo -n belajar-nodejs --timeout=300s
+          
+          # Check MongoDB connection
+          echo "Verifying MongoDB connection..."
+          minikube kubectl -- exec -n belajar-nodejs deployment/belajar-nodejs-dasar -- env | grep MONGO_URI
           
           # Wait for app deployment to complete
           echo "Waiting for application to be ready..."
-          minikube kubectl -- rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=600s
+          minikube kubectl -- rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=900s
+          
+          # Check pod status
+          echo "Checking pod status..."
+          minikube kubectl -- get pods -n belajar-nodejs
+          
+          # Check app logs
+          echo "Checking application logs..."
+          minikube kubectl -- logs -n belajar-nodejs deployment/belajar-nodejs-dasar --tail=50
 
   notify:
     needs: [build-and-push, deploy]
