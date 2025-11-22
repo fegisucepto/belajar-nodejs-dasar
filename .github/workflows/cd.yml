@@ -145,30 +145,23 @@ jobs:
           # Set KUBECONFIG environment variable
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
           
-          # Initialize kubeconfig with empty config if it doesn't exist
-          if [ ! -f ~/.kube/config ]; then
-            echo "Initializing empty kubeconfig"
-            echo 'apiVersion: v1' > ~/.kube/config
-            echo 'kind: Config' >> ~/.kube/config
-            echo 'clusters: []' >> ~/.kube/config
-            echo 'contexts: []' >> ~/.kube/config
-            echo 'current-context: ""' >> ~/.kube/config
-            echo 'users: []' >> ~/.kube/config
-          fi
-          
-          # Try to update context if minikube is available
+          # Try to use minikube context if available
           if command -v minikube &> /dev/null; then
-            echo "Updating minikube context"
+            echo "Using minikube context"
             minikube update-context 2>/dev/null || true
-          fi
-          
-          # Get current context or set to N/A if not available
-          if [ -f ~/.kube/config ]; then
-            CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo 'N/A')
+            # Use minikube kubectl to get config
+            CURRENT_CTX=$(minikube kubectl -- config current-context 2>/dev/null || echo 'minikube')
             echo "Current context: $CURRENT_CTX"
             echo "cluster_context=$CURRENT_CTX" >> $GITHUB_OUTPUT
           else
-            echo "cluster_context=N/A" >> $GITHUB_OUTPUT
+            # Fallback if minikube is not available
+            if [ -f ~/.kube/config ]; then
+              CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo 'N/A')
+              echo "Current context: $CURRENT_CTX"
+              echo "cluster_context=$CURRENT_CTX" >> $GITHUB_OUTPUT
+            else
+              echo "cluster_context=N/A" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Send Slack Notification
