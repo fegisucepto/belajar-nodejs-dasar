@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: $DOCKERHUB_USERNAME/belajar-nodejs-dasar:$TAG
+        image: fegisucepto/belajar-nodejs-dasar:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
@@ -24,8 +24,6 @@ spec:
           value: "production"
         - name: PORT
           value: "3000"
-        - name: MONGO_URI
-          value: "mongodb://mongo:27017/belajar-nodejs"
         resources:
           requests:
             cpu: "100m"
@@ -33,19 +31,3 @@ spec:
           limits:
             cpu: "500m"
             memory: "512Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 5
-          failureThreshold: 3

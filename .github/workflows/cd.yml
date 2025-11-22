@@ -71,48 +71,19 @@ jobs:
 
       - name: Start Minikube
         run: |
-          # Stop Minikube if it's already running
+          # Stop and clean Minikube
           minikube delete || true
           
-          # Start Minikube with required options
+          # Start Minikube with simple configuration
           minikube start \
             --driver=docker \
-            --force \
-            --embed-certs=true \
-            --container-runtime=containerd \
-            --cni=bridge \
             --cpus=2 \
             --memory=4g \
-            --disk-size=20g \
             --kubernetes-version=stable \
-            --addons=ingress \
-            --alsologtostderr \
-            --v=2
+            --wait=true
           
           # Wait for Minikube to be ready
           minikube status
-          minikube kubectl -- get nodes
-
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          minikube update-context
-          minikube kubectl -- config view --flatten > ~/.kube/config
-          kubectl config set-context --current --namespace=default
-          kubectl config use-context minikube
-          chmod 600 ~/.kube/config
-          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
-
-      - name: Verify Kubernetes connection
-        run: |
-          echo "=== MINIKUBE STATUS ==="
-          minikube status
-          echo "=== K8S VERSION ==="
-          kubectl version
-          echo "=== NODES ==="
-          kubectl get nodes
-          echo "=== CLUSTER INFO ==="
-          kubectl cluster-info
 
       - name: Deploy to Kubernetes
         env:
@@ -122,24 +93,29 @@ jobs:
           set -e
           
           # Create namespace if not exists
-          kubectl create namespace belajar-nodejs --dry-run=client -o yaml | kubectl apply -f -
+          minikube kubectl -- create namespace belajar-nodejs --dry-run=client -o yaml | minikube kubectl -- apply -f -
           
-          # Deploy application with validation disabled
-          kubectl apply -f k8s/ --validate=false
+          # Deploy application
+          minikube kubectl -- apply -f k8s/ -n belajar-nodejs
         
           # Wait for deployment to complete
-          kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=180s
+          minikube kubectl -- rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=180s
 
   notify:
     needs: [build-and-push, deploy]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Get cluster info
-        id: cluster-info
+      - name: Get deployment status
+        id: deployment-status
         run: |
-          echo "cluster_context=minikube" >> $GITHUB_OUTPUT
-          echo "Deployment completed successfully"
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
+            echo "cluster_context=minikube" >> $GITHUB_OUTPUT
+            echo "deployment_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "cluster_context=error" >> $GITHUB_OUTPUT
+            echo "deployment_status=failed" >> $GITHUB_OUTPUT
+          fi
 
       - name: Send Slack Notification
         uses: rtCamp/action-slack-notify@v2
@@ -151,7 +127,7 @@ jobs:
             *Branch/Tag*: ${{ github.ref_name }}
             *Workflow*: ${{ github.workflow }}
             *Commit*: `${{ github.sha }}` 
-            *Cluster*: ${{ steps.cluster-info.outputs.cluster_context }}
+            *Cluster*: ${{ steps.deployment-status.outputs.cluster_context }}
             *View Logs*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_COLOR: ${{ job.status == 'success' && '#36a64f' || '#ff0000' }}
           MSG_MINIMAL: "true"
