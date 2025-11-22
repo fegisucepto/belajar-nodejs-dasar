@@ -85,6 +85,15 @@ jobs:
           # Wait for Minikube to be ready
           minikube status
 
+      - name: Build Docker Image in Minikube
+        run: |
+          set -e
+          
+          # Build Docker image in Minikube
+          eval $(minikube docker-env)
+          docker build -t fegisucepto/belajar-nodejs-dasar:latest .
+          docker images | grep belajar-nodejs-dasar
+          
       - name: Deploy to Kubernetes
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}

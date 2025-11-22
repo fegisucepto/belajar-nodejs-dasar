@@ -16,7 +16,7 @@ spec:
       containers:
       - name: app
         image: fegisucepto/belajar-nodejs-dasar:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
         env:
