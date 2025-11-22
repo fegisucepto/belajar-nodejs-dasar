@@ -49,6 +49,23 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 5
           failureThreshold: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: belajar-nodejs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
       - name: mongo
         image: mongo:latest
         ports:

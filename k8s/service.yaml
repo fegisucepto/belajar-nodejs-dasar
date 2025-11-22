@@ -18,7 +18,7 @@ metadata:
   namespace: belajar-nodejs
 spec:
   selector:
-    app: belajar-nodejs-dasar
+    app: mongo
   ports:
   - port: 27017
     targetPort: 27017
