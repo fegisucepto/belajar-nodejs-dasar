@@ -138,6 +138,16 @@ jobs:
         id: cluster-info
         continue-on-error: true
         run: |
+          # Create .kube directory if it doesn't exist
+          mkdir -p ~/.kube
+          
+          # Get minikube kubeconfig and merge with existing config
+          minikube update-context 2>/dev/null || true
+          
+          # Set KUBECONFIG environment variable
+          echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
+          
+          # Get current context or set to N/A if not available
           if [ -f ~/.kube/config ]; then
             echo "cluster_context=$(kubectl config current-context 2>/dev/null || echo 'N/A')" >> $GITHUB_OUTPUT
           else
@@ -147,7 +157,7 @@ jobs:
       - name: Send Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_TITLE: "Deployment ${{ job.status == 'success' && '✅' || '❌' }} - ${{ github.workflow }}"
           SLACK_MESSAGE: |
             *Status*: ${{ job.status == 'success' && 'Berhasil' || 'Gagal' }}
