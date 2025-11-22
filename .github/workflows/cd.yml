@@ -77,17 +77,18 @@ jobs:
           # Start Minikube with required options
           minikube start \
             --driver=docker \
-          --force \
-          --embed-certs=true \
-          --container-runtime=containerd \
-          --nodes=1 \
-          --cpus=2 \
-          --memory=4g \
-          --disk-size=20g \
-          --addons=ingress,metrics-server \
-          --alsologtostderr \
-          --v=2
-        
+            --force \
+            --embed-certs=true \
+            --container-runtime=containerd \
+            --cni=bridge \
+            --cpus=2 \
+            --memory=4g \
+            --disk-size=20g \
+            --kubernetes-version=stable \
+            --addons=ingress \
+            --alsologtostderr \
+            --v=2
+          
           # Wait for Minikube to be ready
           minikube status
           minikube kubectl -- get nodes
@@ -119,7 +120,7 @@ jobs:
           TAG: ${{ needs.build-and-push.outputs.image_tag || 'latest' }}
         run: |
           set -e
-        
+          
           # Create namespace if not exists
           kubectl create namespace belajar-nodejs --dry-run=client -o yaml | kubectl apply -f -
           
@@ -128,7 +129,7 @@ jobs:
         
           # Wait for deployment to complete
           kubectl rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=180s
-  
+
   notify:
     needs: [build-and-push, deploy]
     if: always()
@@ -141,15 +142,31 @@ jobs:
           # Create .kube directory if it doesn't exist
           mkdir -p ~/.kube
           
-          # Get minikube kubeconfig and merge with existing config
-          minikube update-context 2>/dev/null || true
-          
           # Set KUBECONFIG environment variable
           echo "KUBECONFIG=~/.kube/config" >> $GITHUB_ENV
           
+          # Initialize kubeconfig with empty config if it doesn't exist
+          if [ ! -f ~/.kube/config ]; then
+            echo "Initializing empty kubeconfig"
+            echo 'apiVersion: v1' > ~/.kube/config
+            echo 'kind: Config' >> ~/.kube/config
+            echo 'clusters: []' >> ~/.kube/config
+            echo 'contexts: []' >> ~/.kube/config
+            echo 'current-context: ""' >> ~/.kube/config
+            echo 'users: []' >> ~/.kube/config
+          fi
+          
+          # Try to update context if minikube is available
+          if command -v minikube &> /dev/null; then
+            echo "Updating minikube context"
+            minikube update-context 2>/dev/null || true
+          fi
+          
           # Get current context or set to N/A if not available
           if [ -f ~/.kube/config ]; then
-            echo "cluster_context=$(kubectl config current-context 2>/dev/null || echo 'N/A')" >> $GITHUB_OUTPUT
+            CURRENT_CTX=$(kubectl config current-context 2>/dev/null || echo 'N/A')
+            echo "Current context: $CURRENT_CTX"
+            echo "cluster_context=$CURRENT_CTX" >> $GITHUB_OUTPUT
           else
             echo "cluster_context=N/A" >> $GITHUB_OUTPUT
           fi
@@ -163,7 +180,7 @@ jobs:
             *Status*: ${{ job.status == 'success' && 'Berhasil' || 'Gagal' }}
             *Branch/Tag*: ${{ github.ref_name }}
             *Workflow*: ${{ github.workflow }}
-            *Commit*: `${{ github.sha }}`
+            *Commit*: `${{ github.sha }}` 
             *Cluster*: ${{ steps.cluster-info.outputs.cluster_context }}
             *View Logs*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_COLOR: ${{ job.status == 'success' && '#36a64f' || '#ff0000' }}
