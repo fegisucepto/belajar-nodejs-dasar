@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies
-RUN if [ -f package-lock.json ]; then npm ci --production; else npm install --production; fi && npm cache clean --force
+# Install all dependencies (including devDependencies for now)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi && npm cache clean --force
 
 # Copy app files and set owner to non-root user
 COPY --chown=node:node . .
