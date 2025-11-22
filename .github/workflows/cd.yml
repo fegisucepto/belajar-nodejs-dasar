@@ -102,25 +102,46 @@ jobs:
           echo "Waiting for MongoDB to be ready..."
           minikube kubectl -- rollout status deployment/mongo -n belajar-nodejs --timeout=300s
           
-          # Wait for app pod to be created and running
-          echo "Waiting for app pod to be ready..."
-          minikube kubectl -- wait --for=condition=ready pod -n belajar-nodejs -l app=belajar-nodejs-dasar --timeout=600s
-          
-          # Check pod status
-          echo "Checking pod status..."
+          # Check pod status immediately after deployment
+          echo "Checking initial pod status..."
           minikube kubectl -- get pods -n belajar-nodejs -o wide
           
-          # Wait for app deployment to complete
-          echo "Waiting for application deployment to complete..."
-          minikube kubectl -- rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=900s
+          # Wait a bit for pod to start
+          echo "Waiting 30 seconds for pod initialization..."
+          sleep 30
           
-          # Check app logs after deployment is ready
+          # Check pod status again
+          echo "Checking pod status after initialization..."
+          minikube kubectl -- get pods -n belajar-nodejs -o wide
+          
+          # Check app logs to see what's happening
           echo "Checking application logs..."
-          minikube kubectl -- logs -n belajar-nodejs deployment/belajar-nodejs-dasar --tail=50 || echo "No logs available yet"
+          minikube kubectl -- logs -n belajar-nodejs -l app=belajar-nodejs-dasar --tail=50 || echo "No logs available"
           
-          # Verify MongoDB connection after app is ready
-          echo "Verifying MongoDB connection..."
-          minikube kubectl -- exec -n belajar-nodejs deployment/belajar-nodejs-dasar -- env | grep MONGO_URI || echo "MongoDB URI verified"
+          # Check MongoDB connection from app perspective
+          echo "Testing MongoDB connectivity..."
+          minikube kubectl -- exec -n belajar-nodejs deployment/mongo -- mongosh --eval "db.adminCommand('ping')" || echo "MongoDB not responding"
+          
+          # Check MongoDB service connectivity
+          echo "Checking MongoDB service..."
+          minikube kubectl -- get svc -n belajar-nodejs
+          
+          # Try to check app environment
+          echo "Checking app environment..."
+          minikube kubectl -- exec -n belajar-nodejs deployment/belajar-nodejs-dasar -- env | grep -E '(NODE_ENV|PORT|MONGO_URI)' || echo "Cannot access app container"
+          
+          # Wait for deployment with extended timeout and better error handling
+          echo "Waiting for deployment completion (this may take several minutes)..."
+          minikube kubectl -- rollout status deployment/belajar-nodejs-dasar -n belajar-nodejs --timeout=1200s || {
+            echo "Deployment timeout - checking final status..."
+            minikube kubectl -- get pods -n belajar-nodejs -o wide
+            minikube kubectl -- describe deployment belajar-nodejs-dasar -n belajar-nodejs
+            echo "Final app logs..."
+            minikube kubectl -- logs -n belajar-nodejs -l app=belajar-nodejs-dasar --tail=100 || echo "Cannot get logs"
+            exit 1
+          }
+          
+          echo "Deployment completed successfully!"
 
   notify:
     needs: [build-and-push, deploy]
