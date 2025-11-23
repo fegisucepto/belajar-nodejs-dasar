@@ -49,6 +49,10 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=fegisucepto
+            -Dsonar.projectKey=fegisucepto_belajar-nodejs-dasar
       
       # 10. Security Check
       - name: Audit Dependencies
