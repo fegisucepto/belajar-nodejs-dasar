@@ -211,7 +211,7 @@ describe('User Routes', () => {
       const response = await request(server).delete(`/api/users/${nonExistentId}`);
 
       expect(response.status).toBe(404);
-      expect(response.body).toHaveProperty('message', 'User not found');
+      expect(response.body).toHaveProperty('message', 'User is not found');
     });
   });
 
