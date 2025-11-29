@@ -48,6 +48,8 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "ci@github.com"
           git checkout main
+          # Stash any local changes first
+          git stash push -m "Stash local changes" || echo "No changes to stash"
           git add k8s/deployment-app.yaml
           git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
           # Create and push deployment branch
