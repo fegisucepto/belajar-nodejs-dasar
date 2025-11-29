@@ -4,8 +4,8 @@ metadata:
   name: belajar-nodejs-dasar
   namespace: argocd
 annotations:
-    argocd-image-updater.argoproj.io/image-list: app=fegisp/belajar-nodejs-dasar
-    argocd-image-updater.argoproj.io/app.update-strategy: semver:^v
+  argocd-image-updater.argoproj.io/image-list: app=fegisp/belajar-nodejs-dasar
+  argocd-image-updater.argoproj.io/app.update-strategy: semver:^v
 spec:
   project: default
 
