@@ -3,21 +3,18 @@ kind: Application
 metadata:
   name: belajar-nodejs-dasar
   namespace: argocd
-annotations:
-  argocd-image-updater.argoproj.io/image-list: app=fegisp/belajar-nodejs-dasar
-  argocd-image-updater.argoproj.io/app.update-strategy: semver:^v
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: "app=fegisp/belajar-nodejs-dasar"
+    argocd-image-updater.argoproj.io/app.update-strategy: "semver:^v"
 spec:
   project: default
-
   source:
     repoURL: https://github.com/fegisucepto/belajar-nodejs-dasar.git
     targetRevision: main
     path: k8s
-
   destination:
     server: https://kubernetes.default.svc
     namespace: belajar-nodejs
-
   syncPolicy:
     automated:
       prune: true
