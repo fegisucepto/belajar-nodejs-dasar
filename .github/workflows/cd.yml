@@ -47,5 +47,5 @@ jobs:
           git checkout main
           git add k8s/deployment-app.yaml
           git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
-          git push origin main
+          git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git main
 
