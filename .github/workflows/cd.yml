@@ -13,6 +13,8 @@ jobs:
       # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper branch operations
 
       # 2️⃣ Login Docker Hub
       - name: Login to Docker Hub
@@ -36,12 +38,14 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           sed -i "s#image: fegisp/belajar-nodejs-dasar:.*#image: fegisp/belajar-nodejs-dasar:${TAG}#" k8s/deployment-app.yaml
 
-      # 5️⃣ Commit & push update ke branch fegisp
+      # 5️⃣ Commit & push update ke branch main
       - name: Commit and push deployment-app.yaml changes
         run: |
+          TAG=${GITHUB_REF#refs/tags/}
           git config --global user.name "GitHub Actions"
           git config --global user.email "ci@github.com"
+          git checkout main
           git add k8s/deployment-app.yaml
           git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
-          git push --set-upstream https://git:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git fegisp
+          git push origin main
 
