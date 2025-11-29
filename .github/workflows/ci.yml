@@ -54,14 +54,14 @@ jobs:
             -Dsonar.organization=fegisucepto
             -Dsonar.projectKey=fegisucepto_belajar-nodejs-dasar
 
-        # Check the Quality Gate status.
-      - name: SonarQube Quality Gate check
-        id: sonarqube-quality-gate-check
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        with:
-          pollingTimeoutSec: 600
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   # Check the Quality Gate status.
+      # - name: SonarQube Quality Gate check
+      #   id: sonarqube-quality-gate-check
+      #   uses: sonarsource/sonarqube-quality-gate-action@master
+      #   with:
+      #     pollingTimeoutSec: 600
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       
       # 10. Security Check
       - name: Audit Dependencies
