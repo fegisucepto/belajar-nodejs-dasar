@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"   # trigger setiap push tag yang dimulai dengan v, misal v4.1.0
 
+permissions:
+  contents: write
+
 jobs:
   update-deployment:
     runs-on: ubuntu-latest
@@ -47,10 +50,12 @@ jobs:
           git checkout main
           git add k8s/deployment-app.yaml
           git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
-          # Check if GH_PAT is available
-          if [ -z "${{ secrets.GH_PAT }}" ]; then
-            echo "Error: GH_PAT secret is not set"
-            exit 1
+          # Check if GH_PAT is available, otherwise use GITHUB_TOKEN
+          if [ -n "${{ secrets.GH_PAT }}" ]; then
+            echo "Using GH_PAT for authentication"
+            git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git main
+          else
+            echo "GH_PAT not found, using GITHUB_TOKEN"
+            git push origin main
           fi
-          git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git main
 
