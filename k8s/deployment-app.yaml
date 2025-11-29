@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: fegisp/belajar-nodejs-dasar:latest
+        image: fegisp/belajar-nodejs-dasar
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
