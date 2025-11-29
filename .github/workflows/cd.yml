@@ -47,5 +47,10 @@ jobs:
           git checkout main
           git add k8s/deployment-app.yaml
           git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
+          # Check if GH_PAT is available
+          if [ -z "${{ secrets.GH_PAT }}" ]; then
+            echo "Error: GH_PAT secret is not set"
+            exit 1
+          fi
           git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git main
 
