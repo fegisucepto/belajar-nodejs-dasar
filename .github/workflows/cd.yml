@@ -35,31 +35,31 @@ jobs:
           docker tag fegisp/belajar-nodejs-dasar:${TAG} fegisp/belajar-nodejs-dasar:latest
           docker push fegisp/belajar-nodejs-dasar:latest
 
-      # # 4️⃣ Update Deployment YAML
-      # - name: Update k8s deployment-app.yaml with new tag
-      #   run: |
-      #     TAG=${GITHUB_REF#refs/tags/}
-      #     sed -i "s#image: fegisp/belajar-nodejs-dasar:.*#image: fegisp/belajar-nodejs-dasar:${TAG}#" k8s/deployment-app.yaml
+      # 4️⃣ Update Deployment YAML
+      - name: Update k8s deployment-app.yaml with new tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          sed -i "s#image: fegisp/belajar-nodejs-dasar:.*#image: fegisp/belajar-nodejs-dasar:${TAG}#" k8s/deployment-app.yaml
 
-      # # 5️⃣ Commit & push update ke branch main
-      # - name: Commit and push deployment-app.yaml changes
-      #   run: |
-      #     TAG=${GITHUB_REF#refs/tags/}
-      #     git config --global user.name "GitHub Actions"
-      #     git config --global user.email "ci@github.com"
-      #     git checkout main
-      #     git add k8s/deployment-app.yaml
-      #     git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
-      #     # Create and push deployment branch
-      #     git checkout -b deployment-${TAG}
-      #     # Check if GH_PAT is available, otherwise use GITHUB_TOKEN
-      #     if [ -n "${{ secrets.GH_PAT }}" ]; then
-      #       echo "Using GH_PAT for authentication"
-      #       git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git deployment-${TAG}
-      #     else
-      #       echo "GH_PAT not found, using GITHUB_TOKEN"
-      #       git push --set-upstream origin deployment-${TAG}
-      #     fi
-      #     echo "Deployment changes pushed to branch deployment-${TAG}"
-      #     echo "Create a pull request to merge deployment-${TAG} into main"
+      # 5️⃣ Commit & push update ke branch main
+      - name: Commit and push deployment-app.yaml changes
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "ci@github.com"
+          git checkout main
+          git add k8s/deployment-app.yaml
+          git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
+          # Create and push deployment branch
+          git checkout -b deployment-${TAG}
+          # Check if GH_PAT is available, otherwise use GITHUB_TOKEN
+          if [ -n "${{ secrets.GH_PAT }}" ]; then
+            echo "Using GH_PAT for authentication"
+            git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git deployment-${TAG}
+          else
+            echo "GH_PAT not found, using GITHUB_TOKEN"
+            git push --set-upstream origin deployment-${TAG}
+          fi
+          echo "Deployment changes pushed to branch deployment-${TAG}"
+          echo "Create a pull request to merge deployment-${TAG} into main"
 
