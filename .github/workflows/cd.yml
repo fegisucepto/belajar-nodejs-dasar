@@ -3,63 +3,45 @@ name: Continuous Deployment
 on:
   push:
     tags:
-      - "v*"   # trigger setiap push tag yang dimulai dengan v, misal v4.1.0
-
-permissions:
-  contents: write
+      - 'v*'  # Trigger pada tag v*
 
 jobs:
-  update-deployment:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for proper branch operations
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # 2️⃣ Login Docker Hub
+      # 1️⃣ Login ke Docker Hub
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Build & push Docker image
+      # 2️⃣ Build & Push Docker image
       - name: Build and push Docker image
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          docker build -t fegisp/belajar-nodejs-dasar:${TAG} .
-          docker push fegisp/belajar-nodejs-dasar:${TAG}
-          docker tag fegisp/belajar-nodejs-dasar:${TAG} fegisp/belajar-nodejs-dasar:latest
+          docker build -t fegisp/belajar-nodejs-dasar:$TAG .
+          docker push fegisp/belajar-nodejs-dasar:$TAG
+          # Juga push sebagai latest untuk ArgoCD Image Updater
+          docker tag fegisp/belajar-nodejs-dasar:$TAG fegisp/belajar-nodejs-dasar:latest
           docker push fegisp/belajar-nodejs-dasar:latest
 
-      # 4️⃣ Update Deployment YAML
-      - name: Update k8s deployment-app.yaml with new tag
+      # 3️⃣ Update tag di values.yaml
+      - name: Update Helm values with new tag
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          sed -i "s#image: fegisp/belajar-nodejs-dasar:.*#image: fegisp/belajar-nodejs-dasar:${TAG}#" k8s/deployment-app.yaml
+          sed -i "s|tag:.*|tag: \"$TAG\"|" helm/belajar-nodejs-dasar/values.yaml
 
-      # 5️⃣ Commit & push update ke branch main
-      - name: Commit and push deployment-app.yaml changes
+      # 4️⃣ Commit & push perubahan
+      - name: Commit and push changes
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           git config --global user.name "GitHub Actions"
           git config --global user.email "ci@github.com"
           git checkout main
-          git add k8s/deployment-app.yaml
-          git commit -m "Update deployment image to ${TAG}" || echo "No changes to commit"
-          # Create and push deployment branch
-          git checkout -b deployment-${TAG}
-          # Check if GH_PAT is available, otherwise use GITHUB_TOKEN
-          if [ -n "${{ secrets.GH_PAT }}" ]; then
-            echo "Using GH_PAT for authentication"
-            git push --set-upstream https://fegisucepto:${{ secrets.GH_PAT }}@github.com/fegisucepto/belajar-nodejs-dasar.git deployment-${TAG}
-          else
-            echo "GH_PAT not found, using GITHUB_TOKEN"
-            git push --set-upstream origin deployment-${TAG}
-          fi
-          echo "Deployment changes pushed to branch deployment-${TAG}"
-          echo "Create a pull request to merge deployment-${TAG} into main"
-
+          git add helm/belajar-nodejs-dasar/values.yaml
+          git commit -m "Update image tag to $TAG" || echo "No changes to commit"
+          git push origin main

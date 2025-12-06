@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "belajar-nodejs-dasar.fullname" . }}
+  labels:
+    {{- include "belajar-nodejs-dasar.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "belajar-nodejs-dasar.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "belajar-nodejs-dasar.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "belajar-nodejs-dasar.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: MONGO_URI
+              value: "mongodb://{{ include "belajar-nodejs-dasar.fullname" . }}-mongodb:27017/{{ .Values.mongodb.database | default "belajar-nodejs" }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

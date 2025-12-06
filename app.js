@@ -26,6 +26,17 @@ app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'UP' }));
+// Add this before other routes
+app.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'Welcome to Belajar NodeJS API',
+    endpoints: {
+      users: '/api/users',
+      health: '/health',
+    },
+  });
+});
 
 // 404 handler
 app.use((req, res) => {
