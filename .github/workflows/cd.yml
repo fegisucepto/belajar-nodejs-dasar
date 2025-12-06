@@ -41,7 +41,7 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           git config --global user.name "GitHub Actions"
           git config --global user.email "ci@github.com"
-          git checkout main
+          git checkout fegisp
           git add helm/belajar-nodejs-dasar/values.yaml
           git commit -m "Update image tag to $TAG" || echo "No changes to commit"
           git push origin main
