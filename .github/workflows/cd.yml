@@ -44,4 +44,4 @@ jobs:
           git checkout fegisp
           git add helm/belajar-nodejs-dasar/values.yaml
           git commit -m "Update image tag to $TAG" || echo "No changes to commit"
-          git push origin main
+          git push origin fegisp
