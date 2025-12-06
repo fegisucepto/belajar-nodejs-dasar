@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "belajar-nodejs-dasar.fullname" . }}
+  labels:
+    {{- include "belajar-nodejs-dasar.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default .Values.service.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "belajar-nodejs-dasar.selectorLabels" . | nindent 4 }}
