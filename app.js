@@ -33,8 +33,8 @@ app.get('/', (req, res) => {
     message: 'Welcome to Belajar NodeJS API',
     endpoints: {
       users: '/api/users',
-      health: '/health'
-    }
+      health: '/health',
+    },
   });
 });
 
